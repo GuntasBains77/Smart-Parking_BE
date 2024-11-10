@@ -41,6 +41,15 @@ const paymentSchema = new mongoose.Schema({
     generatedAt: { type: Date }
 });
 
+const feedbackSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    feedback: { type: String, required: true },
+    submittedAt: { type: Date, default: Date.now }
+});
+
+const Feedback = mongoose.model('Feedback', feedbackSchema);
+
+
 const Reservation = mongoose.model('Reservation', reservationSchema);
 const Payment = mongoose.model('Payment', paymentSchema);
 
@@ -101,6 +110,27 @@ app.post('/process-payment', async (req, res) => {
     }
 });
 
+app.post('/submit-feedback', async (req, res) => {
+    const { userId, feedback } = req.body;
+
+    if (!userId || !feedback) {
+        return res.status(400).json({ message: 'User ID and feedback are required' });
+    }
+
+    try {
+        // Save feedback in the database
+        const newFeedback = new Feedback({ userId, feedback });
+        await newFeedback.save();
+
+        // Return a success response
+        res.status(201).json({ message: 'Feedback submitted successfully', feedback: newFeedback });
+    } catch (err) {
+        console.error('Error saving feedback:', err);
+        res.status(500).json({ message: 'Error submitting feedback', error: err.message });
+    }
+});
+
+
 // QR Code Generation Endpoint
 app.post('/generate-qrcode', async (req, res) => {
     const { userId, slotNumber, amount, paymentMethod } = req.body;
@@ -117,7 +147,8 @@ app.post('/generate-qrcode', async (req, res) => {
                 qrData = `paytm://pay?pa=${userId}&pn=SmartParking&am=${amount}&tn=Parking Reservation for Slot ${slotNumber}`;
                 break;
             case 'Google Pay':
-                qrData = `upi://pay?pa=${userId}@gpay&pn=SmartParking&am=${amount}&tn=Parking Reservation for Slot ${slotNumber}`;
+                //qrData = `upi://pay?pa=${userId}@gpay&pn=SmartParking&am=${amount}&tn=Parking Reservation for Slot ${slotNumber}`;
+                qrData = `http://192.168.1.17:8080/payment/NewExitId`;
                 break;
             default:
                 return res.status(400).json({ error: 'Invalid payment method' });
